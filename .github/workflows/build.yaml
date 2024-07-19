@@ -45,6 +45,6 @@ jobs:
           git commit -m "Updated README" -a || echo "No changes to commit"
 
       - name: Push changes
-        run: git push origin main
-        env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          git remote set-url origin https://github-actions:${{ secrets.ACCESS_TOKEN }}@github.com/${{ github.repository }}
+          git push origin main
