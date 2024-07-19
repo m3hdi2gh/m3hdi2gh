@@ -7,7 +7,8 @@ import time
 import hashlib
 
 # Personal access token with permissions: read:enterprise, read:org, read:repo_hook, read:user, repo
-# my token: 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
+if not os.environ.get('ACCESS_TOKEN') or not os.environ.get('USER_NAME'):
+    raise EnvironmentError("ACCESS_TOKEN and USER_NAME environment variables must be set")
 HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
 
 USER_NAME = os.environ['USER_NAME']
