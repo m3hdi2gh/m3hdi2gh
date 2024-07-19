@@ -7,12 +7,8 @@ import time
 import hashlib
 
 # Personal access token with permissions: read:enterprise, read:org, read:repo_hook, read:user, repo
-# my token: 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
-# HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
-HEADERS = {'authorization': 'token ' + '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'}
-# my username: m3hdi2gh
-#USER_NAME = os.environ['USER_NAME']
-USER_NAME = 'm3hdi2gh'
+HEADERS = {'authorization': 'token '+ os.environ['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']}
+USER_NAME = os.environ['m3hdi2gh']
 QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0,
                'loc_query': 0}
 
