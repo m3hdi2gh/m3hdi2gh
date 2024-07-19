@@ -47,4 +47,4 @@ jobs:
       - name: Push changes
         run: git push origin main
         env:
-          GH_PAT: ${{ secrets.ACCESS_TOKEN }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
