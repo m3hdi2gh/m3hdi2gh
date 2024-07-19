@@ -1,0 +1,18 @@
+This is a cache of all the repositories I own, have contributed to, or am a member of.
+
+repository (hashed)  total commits  my commits  LOC added by me  LOC deleted by me
+         \                \                \           \_____________  \
+          \                \                \______________________  \  \
+           \                \___________________________________   \  \  \
+____________\___________________________________________________\___\__\__\_______
+84883e511802125c5bd0be64db3354242568159856b86f4757d04f536ffed146 5 5 19 16
+46852cc3ebdacf0fa9e4a5fdec31736fe7f4757de8709a9fdd1777862468b053 10 5 98 139
+4c7dedfa369f1454ea5a0c005aa4cc8933a549dec804197c9b7421edaaabb98d 7 6 70 4
+d7fcc7584eca9ed1045e5bd4e267b4c1a8a2db9c88ed9dea9ac8d97801381e0f 8 7 156 39
+683ef68c96e8689d3e27bb5f4abe3fd3738602b43f7c82c3a2e0179712c47efc 5 5 280 4
+682469fa14c9aeabbe691c4e7dac08ad0c3e658c50ab08f14ba18d260ccc0938 3 3 520 1
+9f2c7404b9c89b444f4c615913c05ad263c705fadc1699a9b1aa21dfe0e0cab3 3 3 275 1
+5704195f9a0f6d57c186228bbef3f92e72fbea1cb9d5a41f8fa55105bb4330d6 5 5 297 16
+69ad3145cf736d6f824944e41db8c64a89a049bd7d6042162237fa3500966f19 4 4 187 2
+8ace68cff13ce2021a1a3e3e41b9924a7b7fe7074a07a0813c764c78e1bc3f2c 110 15 14209 611
+a43ede282bb4d85a8d5963931bc7c28717d8444c0165a7789fd08b58baf1bbcf 916 1 70 4
