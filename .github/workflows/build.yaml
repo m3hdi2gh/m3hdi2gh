@@ -1,46 +1,56 @@
-name: README build
+name: Run Python Script
+
 on:
   push:
     branches:
       - main
-  schedule:
-    - cron: "0 4 * * *"
 
 jobs:
-  build:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Get Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
+    - name: Set Up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
 
-      - name: Configure pip cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/cache/requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Install dependencies
-        run: python -m pip install -r cache/requirements.txt
+    - name: Set Environment Variables
+      run: echo "ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }}" >> $GITHUB_ENV
+      env:
+        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
-      - name: Update README file
-        run: python today.py
+    - name: Set Environment Variables USER_NAME
+      run: echo "USER_NAME=${{ secrets.USER_NAME }}" >> $GITHUB_ENV
+      env:
+        USER_NAME: ${{ secrets.USER_NAME }}
 
-      - name: Commit changes
-        run: |
-          git config --global user.email "github-actions-bot@github.com"
-          git config --global user.name "GitHub Actions Bot"
-          git add .
-          git commit -m "Updated README" -a || echo "No changes to commit"
+    - name: Run Python Script
+      run: |
+        set -o pipefail
+        python today.py 2>&1 | tee script.log
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "Script failed. Check script.log for details."
+          exit 1
+        fi
 
-      - name: Push changes
-        run: |
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} main
+    - name: Upload Log
+      uses: actions/upload-artifact@v3
+      with:
+        name: script-log
+        path: script.log
+
+    - name: Notify on Failure
+      if: failure()
+      run: |
+        echo "The workflow has failed. Check the logs for details."
+        echo "Script log:"
+        cat script.log
