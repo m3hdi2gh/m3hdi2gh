@@ -10,8 +10,7 @@ import hashlib
 if not os.environ.get('ACCESS_TOKEN') or not os.environ.get('USER_NAME'):
     raise EnvironmentError("ACCESS_TOKEN and USER_NAME environment variables must be set")
 
-HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
-
+HEADERS = {'authorization': 'token ' + os.environ['ACCESS_TOKEN']}
 USER_NAME = os.environ['USER_NAME']
 
 QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0,
