@@ -105,11 +105,11 @@ def graph_repos_stars(count_type, owner_affiliation, cursor=None, add_loc=0, del
     }'''
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(graph_repos_stars.__name__, query, variables)
-    if request.status_code == 200:
-        if count_type == 'repos':
-            return request.json()['data']['user']['repositories']['totalCount']
-        elif count_type == 'stars':
-            return stars_counter(request.json()['data']['user']['repositories']['edges'])
+    if count_type == 'repos':
+        return request.json()['data']['user']['repositories']['totalCount']
+    elif count_type == 'stars':
+        return stars_counter(request.json()['data']['user']['repositories']['edges'])
+    raise ValueError('graph_repos_stars() got an unknown count_type: ' + str(count_type))
 
 
 def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, deletion_total=0, my_commits=0, cursor=None):
@@ -153,7 +153,7 @@ def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, delet
     request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables': variables},
                             headers=HEADERS)  # I cannot use simple_request(), because I want to save the file before raising Exception
     if request.status_code == 200:
-        if request.json()['data']['repository']['defaultBranchRef'] != None:  # Only count commits if repo isn't empty
+        if request.json()['data']['repository']['defaultBranchRef'] is not None:  # Only count commits if repo isn't empty
             return loc_counter_one_repo(owner, repo_name, data, cache_comment,
                                         request.json()['data']['repository']['defaultBranchRef']['target']['history'],
                                         addition_total, deletion_total, my_commits)
@@ -172,7 +172,8 @@ def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, additio
     only adds the LOC value of commits authored by me
     """
     for node in history['edges']:
-        if node['node']['author']['user'] == OWNER_ID:
+        author = node['node'].get('author') or {}
+        if author.get('user') == OWNER_ID:
             my_commits += 1
             addition_total += node['node']['additions']
             deletion_total += node['node']['deletions']
@@ -184,7 +185,7 @@ def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, additio
                              history['pageInfo']['endCursor'])
 
 
-def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None, edges=[]):
+def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None, edges=None):
     """
     Uses GitHub's GraphQL v4 API to query all the repositories I have access to (with respect to owner_affiliation)
     Queries 60 repos at a time, because larger queries give a 502 timeout error and smaller queries send too many
@@ -192,6 +193,7 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
     Returns the total number of lines of code in all repositories
     """
     query_count('loc_query')
+    edges = [] if edges is None else edges
     query = '''
     query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
         user(login: $login) {
@@ -244,7 +246,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
         data = []
         if comment_size > 0:
             for _ in range(comment_size): data.append('This line is a comment block. Write whatever you want here.\n')
-        with open(filename, 'w') as f:
+        with open(filename, 'w', newline='\n') as f:
             f.writelines(data)
 
     if len(data) - comment_size != len(
@@ -269,7 +271,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
                         loc[2]) + ' ' + str(loc[0]) + ' ' + str(loc[1]) + '\n'
             except TypeError:  # If the repo is empty
                 data[index] = repo_hash + ' 0 0 0 0\n'
-    with open(filename, 'w') as f:
+    with open(filename, 'w', newline='\n') as f:
         f.writelines(cache_comment)
         f.writelines(data)
     for line in data:
@@ -288,7 +290,7 @@ def flush_cache(edges, filename, comment_size):
         data = []
         if comment_size > 0:
             data = f.readlines()[:comment_size]  # only save the comment
-    with open(filename, 'w') as f:
+    with open(filename, 'w', newline='\n') as f:
         f.writelines(data)
         for node in edges:
             f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0\n')
@@ -300,7 +302,7 @@ def force_close_file(data, cache_comment):
     This is needed because if this function is called, the program would've crashed before the file is properly saved and closed
     """
     filename = 'cache/' + hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest() + '.txt'
-    with open(filename, 'w') as f:
+    with open(filename, 'w', newline='\n') as f:
         f.writelines(cache_comment)
         f.writelines(data)
     print('There was an error while writing to the cache file. The file,', filename,
@@ -316,24 +318,39 @@ def stars_counter(data):
     return total_stars
 
 
+def find_tspan(svg, element_id):
+    """
+    Returns the <tspan> carrying the given id.
+    minidom.getElementById() only works with a DTD, so the tree is searched by hand.
+    Raises instead of silently writing a value into the wrong element.
+    """
+    for element in svg.getElementsByTagName('tspan'):
+        if element.getAttribute('id') == element_id:
+            return element
+    raise LookupError('No <tspan id="%s"> in the SVG. The template and today.py are out of sync.' % element_id)
+
+
 def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
+    Elements are looked up by id, so editing the SVG by hand cannot shift the values around.
     """
     svg = minidom.parse(filename)
-    f = open(filename, mode='w', encoding='utf-8')
-    tspan = svg.getElementsByTagName('tspan')
-    tspan[3].firstChild.data = age_data
-    tspan[42].firstChild.data = repo_data
-    tspan[44].firstChild.data = contrib_data
-    tspan[46].firstChild.data = commit_data
-    tspan[48].firstChild.data = star_data
-    tspan[51].firstChild.data = follower_data
-    tspan[53].firstChild.data = loc_data[2]
-    tspan[54].firstChild.data = loc_data[0] + '++'
-    tspan[55].firstChild.data = loc_data[1] + '--'
-    f.write(svg.toxml('utf-8').decode('utf-8'))
-    f.close()
+    values = {
+        'age_data': age_data,
+        'repo_data': repo_data,
+        'contrib_data': contrib_data,
+        'commit_data': commit_data,
+        'star_data': star_data,
+        'follower_data': follower_data,
+        'loc_data': loc_data[2],
+        'loc_add': loc_data[0] + '++',
+        'loc_del': loc_data[1] + '--',
+    }
+    for element_id, value in values.items():
+        find_tspan(svg, element_id).firstChild.data = value
+    with open(filename, mode='w', encoding='utf-8', newline='\n') as f:
+        f.write(svg.toxml('utf-8').decode('utf-8'))
 
 
 def commit_counter(comment_size):
@@ -354,12 +371,12 @@ def commit_counter(comment_size):
 
 def svg_element_getter(filename):
     """
-    Prints the element index of every element in the SVG file
+    Prints the index, id and content of every tspan in the SVG file
     """
     svg = minidom.parse(filename)
-    open(filename, mode='r', encoding='utf-8')
     tspan = svg.getElementsByTagName('tspan')
-    for index in range(len(tspan)): print(index, tspan[index].firstChild.data)
+    for index in range(len(tspan)):
+        print(index, tspan[index].getAttribute('id'), tspan[index].firstChild.data if tspan[index].firstChild else None)
 
 
 def user_getter(username):
@@ -436,7 +453,6 @@ if __name__ == '__main__':
     age_data, age_time = perf_counter(daily_readme, datetime.datetime(1998, 12, 7))
     formatter('age calculation', age_time)
 
-    # Force cache refresh for debugging
     total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
     formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
 
@@ -447,11 +463,11 @@ if __name__ == '__main__':
                                               ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
 
-    commit_data = formatter('commit counter', commit_time, commit_data, 3)
-    star_data = formatter('star counter', star_time, star_data)
-    repo_data = formatter('my repositories', repo_time, repo_data, 2)
-    contrib_data = formatter('contributed repos', contrib_time, contrib_data, 2)
-    follower_data = formatter('follower counter', follower_time, follower_data, 2)
+    commit_data = formatter('commit counter', commit_time, commit_data, 1)
+    star_data = formatter('star counter', star_time, star_data, 1)
+    repo_data = formatter('my repositories', repo_time, repo_data, 1)
+    contrib_data = formatter('contributed repos', contrib_time, contrib_data, 1)
+    follower_data = formatter('follower counter', follower_time, follower_data, 1)
 
     for index in range(len(total_loc) - 1):
         total_loc[index] = '{:,}'.format(total_loc[index])  # format added, deleted, and total LOC

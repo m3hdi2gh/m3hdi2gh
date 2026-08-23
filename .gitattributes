@@ -1,0 +1,3 @@
+# Keep everything LF so the Windows checkout and the Linux runner
+# do not fight over the generated SVG and cache file.
+* text=auto eol=lf
